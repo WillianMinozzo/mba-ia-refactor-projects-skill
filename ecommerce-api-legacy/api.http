@@ -1,4 +1,5 @@
 @baseUrl = http://localhost:3000
+@adminToken = change_me_to_a_long_random_value
 
 ### Checkout - sucesso
 POST {{baseUrl}}/api/checkout
@@ -23,6 +24,9 @@ Content-Type: application/json
   "c_id": 1,
   "card": "5111222233334444"
 }
+
+# Rotas administrativas: se ADMIN_TOKEN estiver definido no servidor, adicione
+# o header "X-Admin-Token: {{adminToken}}" às duas requisições abaixo.
 
 ### Relatório financeiro administrativo
 GET {{baseUrl}}/api/admin/financial-report
