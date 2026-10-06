@@ -1,34 +1,29 @@
+"""Composition root: monta config, dados, rotas e middlewares e sobe o servidor."""
+import logging
+
 from flask import Flask
 from flask_cors import CORS
-from database import db
-from routes.task_routes import task_bp
-from routes.user_routes import user_bp
-from routes.report_routes import report_bp
-import os, sys, json, datetime
 
-app = Flask(__name__)
+from config import Settings
+from database import init_db
+from middlewares.auth import warn_if_admin_routes_open
+from middlewares.error_handler import register_error_handlers
+from routes import register_routes
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'super-secret-key-123'
 
-CORS(app)
-db.init_app(app)
+def create_app(settings=None):
+    settings = settings or Settings()
+    app = Flask(__name__)
+    app.config.from_object(settings)
+    CORS(app, origins=settings.CORS_ORIGINS)
+    init_db(app)
+    register_routes(app)
+    register_error_handlers(app)
+    warn_if_admin_routes_open(app)
+    return app
 
-app.register_blueprint(task_bp)
-app.register_blueprint(user_bp)
-app.register_blueprint(report_bp)
-
-@app.route('/health')
-def health():
-    return {'status': 'ok', 'timestamp': str(datetime.datetime.now())}
-
-@app.route('/')
-def index():
-    return {'message': 'Task Manager API', 'version': '1.0'}
-
-with app.app_context():
-    db.create_all()
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s: %(message)s')
+    app = create_app()
+    app.run(debug=app.config['DEBUG'], host=app.config['HOST'], port=app.config['PORT'])
