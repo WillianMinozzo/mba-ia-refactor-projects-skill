@@ -240,6 +240,13 @@ Passos:
 
 ## T-06 — Guarda de acesso em rotas administrativas
 
+Duas políticas, conforme a classe da rota no inventário. A regra que não pode ser violada: **com o boot padrão, toda rota não `destructive` continua respondendo como antes.**
+
+| Rota | Sem credencial configurada | Com credencial configurada |
+|---|---|---|
+| `destructive` (apaga em massa, reseta banco, executa SQL/comando arbitrário) | **403** — desabilitada | 401 sem o header; comportamento original com ele |
+| Administrativa não destrutiva (prefixo admin, relatório com dados de todos, exclusão de um recurso alheio) | Fora de produção: **responde como antes**, com aviso no log de boot. Em produção: 403 | 401 sem o header; comportamento original com ele |
+
 Antes:
 
 ```python
@@ -256,40 +263,53 @@ from functools import wraps
 from hmac import compare_digest
 from flask import request, jsonify, current_app
 
-def require_admin(view):
+def _guard(view, strict):
     @wraps(view)
     def wrapper(*args, **kwargs):
         expected = current_app.config.get("ADMIN_TOKEN")
-        provided = request.headers.get("X-Admin-Token", "")
         if not expected:
+            open_by_default = not strict and current_app.config.get("APP_ENV") != "production"
+            if open_by_default:
+                return view(*args, **kwargs)
             return jsonify({"erro": "Rota administrativa desabilitada"}), 403
-        if not compare_digest(provided, expected):
+        if not compare_digest(request.headers.get("X-Admin-Token", ""), expected):
             return jsonify({"erro": "Não autorizado"}), 401
         return view(*args, **kwargs)
     return wrapper
+
+def require_admin(view):          # rotas destructive: fechadas sem token
+    return _guard(view, strict=True)
+
+def admin_when_configured(view):  # demais rotas administrativas: exigem token só se configurado
+    return _guard(view, strict=False)
 ```
 
 ```javascript
 // middlewares/auth.js
 const crypto = require('crypto');
 
-function requireAdmin(config) {
+function adminGuard(config, { strict }) {
   return (req, res, next) => {
-    if (!config.adminToken) return res.status(403).json({ error: 'Admin routes disabled' });
+    if (!config.adminToken) {
+      const openByDefault = !strict && config.env !== 'production';
+      return openByDefault ? next() : res.status(403).send('Rota administrativa desabilitada');
+    }
     const provided = Buffer.from(String(req.get('x-admin-token') || ''));
     const expected = Buffer.from(config.adminToken);
     const ok = provided.length === expected.length && crypto.timingSafeEqual(provided, expected);
-    return ok ? next() : res.status(401).json({ error: 'Unauthorized' });
+    return ok ? next() : res.status(401).send('Não autorizado');
   };
 }
 ```
 
 Passos:
-1. Aplique a guarda às rotas `destructive` e administrativas do inventário. A rota continua registrada no mesmo caminho.
-2. A credencial vem da config (`ADMIN_TOKEN`); sem ela configurada, a rota responde 403.
+1. Classifique cada rota sensível: `destructive` recebe a guarda estrita; as demais administrativas recebem a guarda condicional. Rotas comuns do negócio não recebem guarda (autenticação geral fica adiada).
+2. A credencial vem da config (`ADMIN_TOKEN`), sem valor padrão no código. Sem ela, registre um aviso no boot dizendo quais rotas estão abertas e quais estão desabilitadas.
 3. Privilégio autoatribuído: no cadastro público, ignore `role`/`tipo` vindo do cliente e use o padrão.
 4. Token falso/previsível: substitua por token aleatório (`secrets.token_urlsafe`, `crypto.randomBytes`) mantendo a mesma chave na resposta. Implementar verificação de token em todas as rotas fica adiado.
-5. Use o formato de erro que a aplicação já adota.
+5. Use o formato de erro que a aplicação já adota (JSON com a mesma chave, ou texto, se era texto).
+6. Não altere arquivos de exemplo de requisição para exigir o header nas rotas que continuam abertas por padrão; documente o header como opcional.
+7. No resumo final, o finding de controle de acesso é `resolved` para as rotas `destructive` e para o privilégio autoatribuído, e declara explicitamente que as demais rotas administrativas ficam protegidas **quando `ADMIN_TOKEN` é definido**.
 
 ## T-07 — Controller fino: mover regra para model/service
 

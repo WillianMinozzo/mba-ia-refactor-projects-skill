@@ -19,7 +19,7 @@ Argumento opcional (`$ARGUMENTS`): caminho onde salvar o relatório da Fase 2. P
 1. **Fases 1 e 2 são somente leitura.** Antes da confirmação humana você não cria, edita, move nem remove arquivo algum, não instala dependências e não executa a aplicação. Só leitura e busca.
 2. **A confirmação é um portão real.** Ao terminar a Fase 2, imprima a pergunta de confirmação e **encerre o turno**. Não chame nenhuma ferramenta depois dela. Só prossiga se a próxima mensagem do usuário for uma afirmação explícita (`y`, `yes`, `s`, `sim`). Qualquer outra resposta encerra a skill sem tocar no código. Se não houver como receber resposta (execução não interativa), pare ao fim da Fase 2.
 3. **Todo finding tem evidência.** Arquivo e linha vêm de uma leitura real (Read com numeração ou busca com número de linha). Nunca estime, nunca arredonde, nunca cite linha de memória. Se não conseguir apontar a linha, não é um finding.
-4. **O contrato externo é preservado.** Mesmas rotas, métodos, códigos de status e formato de resposta. As únicas exceções são correções de segurança inevitáveis (ex.: parar de devolver senha), e cada uma deve ser listada como "mudança intencional de contrato" no resumo final.
+4. **O contrato externo é preservado.** Mesmas rotas, métodos, códigos de status e formato de resposta. As únicas exceções são correções de segurança inevitáveis (ex.: parar de devolver senha), e cada uma deve ser listada como "mudança intencional de contrato" no resumo final. **Com o boot padrão — o comando original, sem nenhuma variável de ambiente nova — toda rota que não seja `destructive` responde com o mesmo status de antes.** Nenhuma proteção adicionada pode exigir configuração para que uma rota comum continue funcionando.
 5. **Nenhum ✓ sem execução.** Só marque uma verificação como aprovada depois de rodá-la e ver o resultado. Se não foi possível rodar, escreva `✗ não verificado` e o motivo.
 6. **A skill é agnóstica de tecnologia.** Os exemplos de código nas referências são ilustrações em Python e JavaScript; aplique o *princípio* no idioma do stack detectado. Não presuma linguagem, framework, ORM nem gerenciador de pacotes: detecte.
 7. **Sem dependências novas quando a biblioteca padrão ou uma dependência já instalada resolve.** Se uma nova for inevitável, atualize o manifesto e justifique no resumo.
@@ -37,7 +37,7 @@ Leia cada arquivo **no momento indicado**, por inteiro, antes de executar o pass
 | `references/project-analysis.md` | Início da Fase 1 | Heurísticas de detecção de linguagem, framework, banco, domínio, arquitetura, inventário de rotas e estratégia de validação |
 | `references/anti-patterns-catalog.md` | Início da Fase 2 | Catálogo de anti-patterns: sinais de detecção, severidade, APIs deprecated |
 | `references/audit-report-template.md` | Antes de escrever o relatório da Fase 2 | Formato obrigatório do relatório |
-| `references/mvc-guidelines.md` | Início da Fase 3 | Arquitetura alvo: camadas, responsabilidades, direção de dependência, adaptação ao nível de organização |
+| `references/mvc-guidelines.md` | Antes de propor a estrutura alvo (Fase 2) e no início da Fase 3 | Arquitetura alvo: camadas, responsabilidades, direção de dependência, adaptação ao nível de organização |
 | `references/refactoring-playbook.md` | Início da Fase 3 | Transformação concreta para cada anti-pattern, com antes/depois |
 
 ## Fase 1 — Análise do projeto
@@ -81,7 +81,7 @@ Objetivo: cruzar o código contra o catálogo e produzir um relatório acionáve
 4. Classifique a severidade pela definição do catálogo. Na dúvida entre dois níveis, use o critério de desempate descrito lá.
 5. Registre também problemas reais que não estejam no catálogo (use o ID `AP-00` e a mesma régua de severidade).
 6. Em projetos já parcialmente organizados, não confunda pastas com arquitetura: verifique se cada camada cumpre a responsabilidade que o nome promete e se é realmente usada.
-7. Ordene CRITICAL → HIGH → MEDIUM → LOW e escreva o relatório no formato do template, incluindo a estrutura alvo proposta.
+7. Ordene CRITICAL → HIGH → MEDIUM → LOW e escreva o relatório no formato do template. A estrutura alvo proposta segue `references/mvc-guidelines.md` (seções 4 e 5) e é a mesma que a Fase 3 vai executar: mesmos nomes de pastas e de arquivos.
 8. Imprima o relatório completo e, como última linha, a pergunta:
 
 ```
@@ -128,7 +128,7 @@ Corrija os findings de código (segurança, performance, qualidade) dentro da ca
 ### 3.4 Validar
 
 1. **Boot**: suba a aplicação pelo comando real de boot e confirme que inicia sem erro.
-2. **Endpoints**: exercite todas as rotas do inventário e compare com a linha de base. Divergência que não seja mudança intencional de contrato é regressão.
+2. **Endpoints**: com o **boot padrão** (sem variáveis de ambiente novas), exercite todas as rotas do inventário e compare com a linha de base. Divergência que não seja mudança intencional de contrato é regressão; rota não `destructive` respondendo 401/403 onde antes respondia 2xx é regressão. Depois, suba uma segunda vez com as credenciais de guarda configuradas e confirme que as rotas protegidas recusam sem credencial e respondem como antes com ela.
 3. **Anti-patterns**: repita as buscas da Fase 2 para os findings marcados como resolvidos e confirme que os sinais sumiram.
 4. Se algo falhar, corrija e valide de novo — no máximo 3 ciclos. Persistindo a falha, pare e relate exatamente o que não passou.
 5. Encerre qualquer processo iniciado e restaure o backup dos dados locais.

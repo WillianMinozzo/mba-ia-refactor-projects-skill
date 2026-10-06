@@ -120,7 +120,7 @@ Reporte a faixa completa da unidade (`arquivo:início-fim`) e enumere as respons
 - Cliente define o próprio privilégio: campo `role`/`tipo`/`is_admin` aceito do corpo da requisição no cadastro
 - Nenhum middleware/decorator de autenticação no projeto inteiro
 
-A correção na Fase 3 é proporcional: guarda nas rotas `destructive`/administrativas e remoção de privilégio autoatribuído. Introduzir autenticação em **todas** as rotas mudaria o contrato; isso é registrado como adiado.
+A correção na Fase 3 é proporcional e não pode quebrar o boot padrão (ver T-06): rotas `destructive` ficam desabilitadas até haver credencial configurada; as demais rotas administrativas ganham guarda que só é exigida quando a credencial está configurada; privilégio autoatribuído é removido. Introduzir autenticação em **todas** as rotas mudaria o contrato; isso é registrado como adiado.
 
 ---
 

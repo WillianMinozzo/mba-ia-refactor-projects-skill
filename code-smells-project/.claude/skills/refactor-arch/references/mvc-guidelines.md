@@ -151,9 +151,11 @@ Em N2, antes de criar qualquer arquivo, liste o que já existe para a mesma fina
 
 - Mesmos caminhos, métodos, parâmetros, status e chaves de resposta.
 - Mesma porta, mesmo comando de boot e mesmo arquivo de banco padrão.
+- Com o boot padrão (sem variáveis de ambiente novas), toda rota não `destructive` responde com o mesmo status de antes.
 - Mudanças permitidas, sempre declaradas como intencionais no resumo final:
   - remover campo sensível de respostas (senha, hash, segredo, config interna);
-  - exigir credencial em rotas `destructive`/administrativas (401/403 sem ela; comportamento original com ela);
+  - desabilitar rotas `destructive` enquanto não houver credencial configurada (403), e exigi-la quando houver (401 sem ela; comportamento original com ela);
+  - nas demais rotas administrativas, exigir a credencial **somente quando ela está configurada**; sem configuração, fora de produção, a rota responde como antes;
   - ignorar privilégio autoatribuído vindo do cliente;
   - trocar o detalhe técnico de um erro 500 por mensagem genérica.
 - Não incluído no escopo (registrar como adiado): introduzir autenticação em todas as rotas, paginação obrigatória, renomear campos ou rotas, trocar banco ou framework.
